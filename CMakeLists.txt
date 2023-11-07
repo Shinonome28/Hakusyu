@@ -11,4 +11,16 @@ find_package(SDL2_image CONFIG REQUIRED)
 find_package(SDL2_ttf CONFIG REQUIRED)
 find_package(SDL2_mixer CONFIG REQUIRED)
 
+set(image_source_ "${CMAKE_SOURCE_DIR}/images")
+set(image_destination_ "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${CMAKE_BUILD_TYPE}/images")
+add_custom_target(
+    copy_images_
+    COMMAND ${CMAKE_COMMAND} -E copy_directory ${image_source_} ${image_destination_} 
+    COMMENT "Copying images..."
+    VERBATIM
+)
+
+add_custom_target(copy_all_ COMMENT "Copying all files...")
+add_dependencies(copy_all_ copy_images_)
+
 add_subdirectory(src)
