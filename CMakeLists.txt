@@ -20,7 +20,16 @@ add_custom_target(
     VERBATIM
 )
 
+set(font_source_ "${CMAKE_SOURCE_DIR}/fonts")
+set(font_destionation_ "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${CMAKE_BUILD_TYPE}/fonts")
+add_custom_target(
+    copy_fonts_
+    COMMAND ${CMAKE_COMMAND} -E copy_directory ${font_source_} ${font_destionation_} 
+    COMMENT "Copying fonts..."
+    VERBATIM
+)   
+
 add_custom_target(copy_all_ COMMENT "Copying all files...")
-add_dependencies(copy_all_ copy_images_)
+add_dependencies(copy_all_ copy_images_ copy_fonts_)
 
 add_subdirectory(src)
