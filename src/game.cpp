@@ -8,14 +8,25 @@
 
 static std::random_device rd;
 static std::mt19937 rng;
-constexpr int division = 4;
+constexpr int division = 6;
 constexpr int kWindowWidth = 800;
 constexpr int kWindowHeight = 680;
 constexpr int kCharacterPosition = kWindowWidth / 10;
+constexpr SDL_Color kDefaultTextColor = {0, 0, 0, 0xFF};
+constexpr int kDefaultLineMargin = 20;
+constexpr int kDefaultPointSize = 28;
 
 constexpr int kCollisionX = 1;
 constexpr int kCollisionY = 2;
 constexpr int kCollisionBoth = kCollisionX | kCollisionY;
+
+const std::vector<std::vector<std::string>> help_texts = {
+    {"Hello, welcome to Hakusyu!",
+     "Hakusyu is a platform game using sound control",
+     "That means, by the volume of applaud", "<Press Enter to Continue>",
+     "A advice: you'll better turn off input method"},
+    {"Now please select your microphone by entering number",
+     "If you see garbled characters, don't worry, just select a random one"}};
 
 int CheckBoxCollision(const SDL_Rect &a, const SDL_Rect &b) {
   // 分离轴算法
@@ -52,6 +63,11 @@ void Game::SetupEnvironment() {
     throw GameError(IMG_GetError());
   }
 
+  result = TTF_Init();
+  if (result != 0) {
+    throw GameError(TTF_GetError());
+  }
+
   rng.seed(rd());
 }
 
@@ -85,18 +101,27 @@ void Game::Init() {
   if (character_texture_ == nullptr) {
     throw GameError(SDL_GetError());
   }
-  SDL_Rect character_box;
-  character_box.w = character_sprite->w;
-  character_box.h = character_sprite->h;
+  character_texture_wh_.w = character_sprite->w;
+  character_texture_wh_.h = character_sprite->h;
   SDL_FreeSurface(character_sprite);
   SDL_SetTextureBlendMode(character_texture_, SDL_BLENDMODE_BLEND);
 
+  font_ = TTF_OpenFont("fonts/lazy.ttf", kDefaultPointSize);
+  if (font_ == nullptr) {
+    throw GameError(TTF_GetError());
+  }
+}
+
+void Game::StartNewGame() {
   GenNewBlock();
   blocks_.front().x = kCharacterPosition;
-  for (int i = 1; i < division + 2; i++) {
+  for (int i = 1; i < division * 2; i++) {
     GenNewBlock();
   }
 
+  SDL_Rect character_box;
+  character_box.w = character_texture_wh_.w;
+  character_box.h = character_texture_wh_.h;
   character_box.x = kCharacterPosition;
   character_box.y = blocks_.front().y - character_box.h;
   physics_object_.Init(character_box);
@@ -106,9 +131,10 @@ void Game::Main() {
   bool exit = false;
   SDL_Event e;
 
-  physics_object_.ApplyVelocity(1000, 0);
-  physics_object_.ApplyForce(0, 500);
-  physics_object_.SetFriction(0.0005f, 0.01f);
+  // StartNewGame();
+  // physics_object_.ApplyVelocity(1000, 0);
+  // physics_object_.ApplyForce(0, 500);
+  // physics_object_.SetFriction(0.0005f, 0.01f);
 
   while (!exit) {
     while (SDL_PollEvent(&e)) {
@@ -132,14 +158,43 @@ void Game::Main() {
 #endif
     }
 
-    physics_object_.Update(blocks_);
-    ShiftBlocks(physics_object_.GetDeltaX());
-
-    Draw();
+    if (state_ == GameState::kHelp) {
+      if (need_rerender) {
+        RenderTexts(help_texts[help_page_count_], true, kDefaultLineMargin);
+        need_rerender = false;
+      }
+    } else if (state_ == GameState::kGaming) {
+      physics_object_.Update(blocks_);
+      ShiftBlocks(physics_object_.GetDeltaX());
+      GamingDraw();
+    }
   }
 }
 
-void Game::Draw() {
+void Game::RenderTexts(const std::vector<std::string> &texts, bool is_centering,
+                       int margin) {
+  SDL_SetRenderDrawColor(renderer_, 0xFF, 0xFF, 0xFF, 0xFF);
+  SDL_RenderClear(renderer_);
+  int y_offset = 0;
+  for (const std::string &text : texts) {
+    auto r = GetTextTexture(text.c_str());
+    SDL_Texture *texture = std::get<0>(r);
+    SDL_Rect target_rect = std::get<1>(r);
+    if (is_centering) {
+      target_rect.x = (kWindowWidth - target_rect.w) / 2;
+    } else {
+      target_rect.x = 0;
+    }
+    target_rect.y = y_offset;
+    y_offset += target_rect.h + margin;
+
+    SDL_RenderCopy(renderer_, texture, nullptr, &target_rect);
+    SDL_DestroyTexture(texture);
+  }
+  SDL_RenderPresent(renderer_);
+}
+
+void Game::GamingDraw() {
   SDL_SetRenderDrawColor(renderer_, 0xFF, 0xFF, 0xFF, 0xFF);
   SDL_RenderClear(renderer_);
 
@@ -171,11 +226,11 @@ void Game::ShiftBlocks(int pixels) {
 }
 
 void Game::GenNewBlock() {
-  const int min_height = static_cast<int>(0.4 * window_height_);
-  const int max_height = static_cast<int>(0.8 * window_height_);
+  const int min_height = static_cast<int>(0.2 * window_height_);
+  const int max_height = static_cast<int>(0.6 * window_height_);
   const int block_width = static_cast<int>(window_width_ / division);
-  const int min_width = static_cast<int>(0.5 * block_width);
-  const int max_width = static_cast<int>(0.8 * block_width);
+  const int min_width = static_cast<int>(0.3 * block_width);
+  const int max_width = static_cast<int>(0.6 * block_width);
 
   int offset = 0;
   if (!blocks_.empty()) {
@@ -190,6 +245,20 @@ void Game::GenNewBlock() {
   block.x = block_width - width + offset;
   block.y = window_height_ - block.h;
   blocks_.push_back(block);
+}
+
+std::tuple<SDL_Texture *, SDL_Rect> Game::GetTextTexture(const char *text) {
+  SDL_Surface *s = TTF_RenderText_Solid(font_, text, kDefaultTextColor);
+  if (s == nullptr) {
+    throw GameError(TTF_GetError());
+  }
+  SDL_Texture *t = SDL_CreateTextureFromSurface(renderer_, s);
+  if (t == nullptr) {
+    throw GameError(SDL_GetError());
+  }
+  SDL_Rect size = {0, 0, s->w, s->h};
+  SDL_FreeSurface(s);
+  return std::make_tuple(t, size);
 }
 
 void PhysicsObject::Init(const SDL_Rect &box) {

@@ -1,9 +1,13 @@
 #pragma once
 
 #include <SDL2/SDL.h>
+#include <SDL2/SDL_ttf.h>
 
 #include <queue>
 #include <stdexcept>
+#include <string>
+#include <tuple>
+#include <vector>
 
 class GameError : public std::runtime_error {
  public:
@@ -30,6 +34,13 @@ class PhysicsObject {
   SDL_Rect box_;
 };
 
+enum class GameState {
+  kHelp,
+  kSelectDevice,
+  kGaming,
+  kGameEnd,
+};
+
 class Game {
  public:
   static void SetupEnvironment();
@@ -39,15 +50,24 @@ class Game {
   void Main();
 
  private:
-  void Draw();
+  void RenderTexts(const std::vector<std::string> &texts, bool is_centering,
+                   int margin);
+  void GamingDraw();
   void ShiftBlocks(int pixels);
   void GenNewBlock();
+  void StartNewGame();
+  std::tuple<SDL_Texture *, SDL_Rect> GetTextTexture(const char *text);
 
+  GameState state_ = GameState::kHelp;
   int window_width_;
   int window_height_;
   SDL_Window *window_ = nullptr;
   SDL_Renderer *renderer_ = nullptr;
   SDL_Texture *character_texture_ = nullptr;
+  SDL_Rect character_texture_wh_;
+  TTF_Font *font_;
   std::deque<SDL_Rect> blocks_;
   PhysicsObject physics_object_;
+  int help_page_count_ = 0;
+  bool need_rerender = true;
 };
