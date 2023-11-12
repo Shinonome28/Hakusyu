@@ -60,7 +60,7 @@ const std::vector<std::string> kPromptSelectRecorderDevice{
 };
 
 const std::vector<std::string> kPromptRecordingMinimumVolume{
-    "Please keep quiet. We will now record your minimum volume",
+    "Please keep quiet.", "We will now record your minimum volume",
     "<Press Enter To Start>"};
 
 const std::vector<std::string> kPromptRecordingMaximumVolume{
