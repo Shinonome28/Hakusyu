@@ -749,3 +749,11 @@ float Recorder::GetAverageAmplitude() {
 void Recorder::DropRecordingResult() { buffer_position_ = 0; }
 
 size_t Recorder::GetSuggestClipPosition() { return suggest_clip_position_; }
+
+void Game::Exit() {
+  SDL_DestroyTexture(character_texture_);
+  TTF_CloseFont(font_);
+  SDL_DestroyWindow(window_);
+
+  SDL_Quit();
+}

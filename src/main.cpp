@@ -11,6 +11,7 @@ int main(int argc, char **argv) {
     Game game;
     game.Init();
     game.Main();
+    game.Exit();
   } catch (GameError &e) {
     ErrorMessageBox(e.what());
   } catch (std::exception &e) {

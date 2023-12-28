@@ -95,6 +95,8 @@ class Game {
 
   void Main();
 
+  void Exit();
+
  private:
   void RenderTexts(const std::vector<std::string> &texts, bool is_centering,
                    int margin, bool standalone = true);
